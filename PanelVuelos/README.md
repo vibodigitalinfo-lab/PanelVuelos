@@ -16,3 +16,9 @@ Panel de salidas de aeropuerto hecho con Java y JavaFX.
 - Base de datos con vuelos, compañías y aeropuertos
 - Datos reales mediante una API
 - Versión web
+
+## Cómo ejecutarlo
+1. Descarga JavaFX 21 (gluonhq.com/products/javafx) y añade sus .jar al proyecto.
+2. Añade sqlite-jdbc y slf4j-api al proyecto.
+3. Ejecuta Main con estos argumentos de la VM:
+   --module-path "RUTA_A_JAVAFX/lib" --add-modules javafx.controls
