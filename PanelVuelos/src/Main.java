@@ -25,6 +25,7 @@ import java.sql.PreparedStatement;
 import javafx.scene.control.Alert;
 import java.util.Optional;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ChoiceDialog;
 
 public class Main extends Application {
 
@@ -133,6 +134,20 @@ public class Main extends Application {
             ps.executeUpdate();
         }
     }
+    
+    private void cambiarEstado(String numero, String estado) throws SQLException {
+        String sql = "UPDATE vuelo "
+                   + "SET id_estado = (SELECT id_estado FROM estado_vuelo WHERE descripcion_estado = ?) "
+                   + "WHERE numero = ?";
+
+        try (Connection con = DriverManager.getConnection("jdbc:sqlite:vuelos.db");
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, estado);
+            ps.setString(2, numero);
+            ps.executeUpdate();
+        }
+    }
 
     @Override
     public void start(Stage stage) {
@@ -216,6 +231,9 @@ public class Main extends Application {
         Button botonEliminar = new Button("Eliminar vuelo seleccionado");
         botonEliminar.disableProperty().bind(tabla.getSelectionModel().selectedItemProperty().isNull());
 
+        Button botonEstado = new Button("Cambiar estado");
+        botonEstado.disableProperty().bind(tabla.getSelectionModel().selectedItemProperty().isNull());
+        
         HBox formulario = new HBox(10, campoNumero, campoHora, comboDestino, comboPuerta, comboEstado, botonAnadir);
         
         botonAnadir.setOnAction(e -> {
@@ -282,8 +300,33 @@ public class Main extends Application {
                 }
             }
         });
+        
+        botonEstado.setOnAction(e -> {
+            Vuelo seleccionado = tabla.getSelectionModel().getSelectedItem();
 
-        VBox raiz = new VBox(10, titulo, tabla, botonEliminar, formulario);
+            List<String> estados = cargarOpciones(
+                "SELECT descripcion_estado FROM estado_vuelo ORDER BY id_estado", "descripcion_estado");
+
+            ChoiceDialog<String> dialogo = new ChoiceDialog<>(seleccionado.getEstado(), estados);
+            dialogo.setTitle("Cambiar estado");
+            dialogo.setHeaderText("Vuelo " + seleccionado.getNumero() + " a " + seleccionado.getDestino());
+            dialogo.setContentText("Nuevo estado:");
+
+            Optional<String> respuesta = dialogo.showAndWait();
+
+            if (respuesta.isPresent()) {
+                try {
+                    cambiarEstado(seleccionado.getNumero(), respuesta.get());
+                    tabla.setItems(cargarVuelos());
+                } catch (SQLException ex) {
+                    new Alert(Alert.AlertType.ERROR, "No se pudo cambiar el estado.").show();
+                    ex.printStackTrace();
+                }
+            }
+        });
+
+        HBox botones = new HBox(10, botonEstado, botonEliminar);
+        VBox raiz = new VBox(10, titulo, tabla, botones, formulario);
         raiz.setStyle("-fx-padding: 15;");
 
         Scene escena = new Scene(raiz, 900, 450);
