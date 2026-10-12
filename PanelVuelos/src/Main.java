@@ -214,6 +214,7 @@ public class Main extends Application {
         Button botonAnadir = new Button("Añadir vuelo");
         
         Button botonEliminar = new Button("Eliminar vuelo seleccionado");
+        botonEliminar.disableProperty().bind(tabla.getSelectionModel().selectedItemProperty().isNull());
 
         HBox formulario = new HBox(10, campoNumero, campoHora, comboDestino, comboPuerta, comboEstado, botonAnadir);
         
