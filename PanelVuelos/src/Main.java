@@ -15,6 +15,14 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
+import java.sql.PreparedStatement;
+import javafx.scene.control.Alert;
 
 public class Main extends Application {
 
@@ -72,6 +80,46 @@ public class Main extends Application {
 
         return lista;
     }
+    
+    private List<String> cargarOpciones(String sql, String columna) {
+        List<String> opciones = new ArrayList<>();
+
+        try (Connection con = DriverManager.getConnection("jdbc:sqlite:vuelos.db");
+             Statement st = con.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+
+            while (rs.next()) {
+                opciones.add(rs.getString(columna));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return opciones;
+    }
+    
+    private void guardarVuelo(String numero, String hora, String destino, String puerta, String estado)
+            throws SQLException {
+
+        String sql = "INSERT INTO vuelo (numero, id_destino, hora, id_puerta, id_estado) VALUES ("
+                   + "?, "
+                   + "(SELECT id_destino FROM destino WHERE nombre_destino = ?), "
+                   + "?, "
+                   + "(SELECT id_puerta FROM puerta WHERE codigo_puerta = ?), "
+                   + "(SELECT id_estado FROM estado_vuelo WHERE descripcion_estado = ?))";
+
+        try (Connection con = DriverManager.getConnection("jdbc:sqlite:vuelos.db");
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, numero);
+            ps.setString(2, destino);
+            ps.setString(3, hora);
+            ps.setString(4, puerta);
+            ps.setString(5, estado);
+            ps.executeUpdate();
+        }
+    }
 
     @Override
     public void start(Stage stage) {
@@ -128,11 +176,65 @@ public class Main extends Application {
 
         ObservableList<Vuelo> vuelos = cargarVuelos();
         tabla.setItems(vuelos);
+        
+        TextField campoNumero = new TextField();
+        campoNumero.setPromptText("Nº vuelo (ej. IB3104)");
 
-        VBox raiz = new VBox(10, titulo, tabla);
+        TextField campoHora = new TextField();
+        campoHora.setPromptText("Hora (ej. 12:30)");
+
+        ComboBox<String> comboDestino = new ComboBox<>();
+        comboDestino.setPromptText("Destino");
+        comboDestino.getItems().addAll(
+            cargarOpciones("SELECT nombre_destino FROM destino ORDER BY nombre_destino", "nombre_destino"));
+
+        ComboBox<String> comboPuerta = new ComboBox<>();
+        comboPuerta.setPromptText("Puerta");
+        comboPuerta.getItems().addAll(
+            cargarOpciones("SELECT codigo_puerta FROM puerta ORDER BY codigo_puerta", "codigo_puerta"));
+
+        ComboBox<String> comboEstado = new ComboBox<>();
+        comboEstado.setPromptText("Estado");
+        comboEstado.getItems().addAll(
+            cargarOpciones("SELECT descripcion_estado FROM estado_vuelo ORDER BY id_estado", "descripcion_estado"));
+
+        Button botonAnadir = new Button("Añadir vuelo");
+
+        HBox formulario = new HBox(10, campoNumero, campoHora, comboDestino, comboPuerta, comboEstado, botonAnadir);
+        
+        botonAnadir.setOnAction(e -> {
+            String numero = campoNumero.getText().trim().toUpperCase();
+            String hora = campoHora.getText().trim();
+            String destino = comboDestino.getValue();
+            String puerta = comboPuerta.getValue();
+            String estado = comboEstado.getValue();
+
+            if (numero.isEmpty() || hora.isEmpty() || destino == null || puerta == null || estado == null) {
+                new Alert(Alert.AlertType.WARNING, "Rellena todos los campos.").show();
+                return;
+            }
+
+            try {
+                guardarVuelo(numero, hora, destino, puerta, estado);
+                tabla.setItems(cargarVuelos());
+
+                campoNumero.clear();
+                campoHora.clear();
+                comboDestino.setValue(null);
+                comboPuerta.setValue(null);
+                comboEstado.setValue(null);
+
+            } catch (SQLException ex) {
+                new Alert(Alert.AlertType.ERROR,
+                        "No se pudo guardar el vuelo. ¿Ya existe ese número de vuelo?").show();
+                ex.printStackTrace();
+            }
+        });
+
+        VBox raiz = new VBox(10, titulo, tabla, formulario);
         raiz.setStyle("-fx-padding: 15;");
 
-        Scene escena = new Scene(raiz, 600, 350);
+        Scene escena = new Scene(raiz, 900, 450);
         stage.setTitle("Panel de Vuelos");
         stage.setScene(escena);
         stage.show();
