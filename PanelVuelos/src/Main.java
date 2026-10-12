@@ -23,6 +23,8 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import java.sql.PreparedStatement;
 import javafx.scene.control.Alert;
+import java.util.Optional;
+import javafx.scene.control.ButtonType;
 
 public class Main extends Application {
 
@@ -120,6 +122,17 @@ public class Main extends Application {
             ps.executeUpdate();
         }
     }
+    
+    private void eliminarVuelo(String numero) throws SQLException {
+        String sql = "DELETE FROM vuelo WHERE numero = ?";
+
+        try (Connection con = DriverManager.getConnection("jdbc:sqlite:vuelos.db");
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, numero);
+            ps.executeUpdate();
+        }
+    }
 
     @Override
     public void start(Stage stage) {
@@ -199,6 +212,8 @@ public class Main extends Application {
             cargarOpciones("SELECT descripcion_estado FROM estado_vuelo ORDER BY id_estado", "descripcion_estado"));
 
         Button botonAnadir = new Button("Añadir vuelo");
+        
+        Button botonEliminar = new Button("Eliminar vuelo seleccionado");
 
         HBox formulario = new HBox(10, campoNumero, campoHora, comboDestino, comboPuerta, comboEstado, botonAnadir);
         
@@ -239,8 +254,35 @@ public class Main extends Application {
                 ex.printStackTrace();
             }
         });
+        
+        botonEliminar.setOnAction(e -> {
+            Vuelo seleccionado = tabla.getSelectionModel().getSelectedItem();
 
-        VBox raiz = new VBox(10, titulo, tabla, formulario);
+            if (seleccionado == null) {
+                new Alert(Alert.AlertType.WARNING, "Selecciona primero un vuelo de la tabla.").show();
+                return;
+            }
+
+            Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION,
+                    "¿Eliminar el vuelo " + seleccionado.getNumero() + " a " + seleccionado.getDestino() + "?",
+                    ButtonType.YES, ButtonType.NO);
+            confirmacion.setTitle("Confirmar eliminación");
+            confirmacion.setHeaderText(null);
+
+            Optional<ButtonType> respuesta = confirmacion.showAndWait();
+
+            if (respuesta.isPresent() && respuesta.get() == ButtonType.YES) {
+                try {
+                    eliminarVuelo(seleccionado.getNumero());
+                    tabla.setItems(cargarVuelos());
+                } catch (SQLException ex) {
+                    new Alert(Alert.AlertType.ERROR, "No se pudo eliminar el vuelo.").show();
+                    ex.printStackTrace();
+                }
+            }
+        });
+
+        VBox raiz = new VBox(10, titulo, tabla, botonEliminar, formulario);
         raiz.setStyle("-fx-padding: 15;");
 
         Scene escena = new Scene(raiz, 900, 450);
