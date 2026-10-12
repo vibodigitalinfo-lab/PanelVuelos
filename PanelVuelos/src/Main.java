@@ -10,6 +10,11 @@ import javafx.scene.control.Label;
 import javafx.stage.Stage;
 import javafx.scene.control.TableCell;
 import javafx.scene.paint.Color;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 public class Main extends Application {
 
@@ -34,6 +39,38 @@ public class Main extends Application {
         public String getHora() { return hora; }
         public String getPuerta() { return puerta; }
         public String getEstado() { return estado; }
+    }
+    
+    private ObservableList<Vuelo> cargarVuelos() {
+        ObservableList<Vuelo> lista = FXCollections.observableArrayList();
+
+        String url = "jdbc:sqlite:vuelos.db";
+        String sql = "SELECT v.numero, d.nombre_destino, v.hora, p.codigo_puerta, e.descripcion_estado "
+                   + "FROM vuelo v "
+                   + "JOIN destino d ON v.id_destino = d.id_destino "
+                   + "JOIN puerta p ON v.id_puerta = p.id_puerta "
+                   + "JOIN estado_vuelo e ON v.id_estado = e.id_estado "
+                   + "ORDER BY v.hora";
+
+        try (Connection con = DriverManager.getConnection(url);
+             Statement st = con.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+
+            while (rs.next()) {
+                lista.add(new Vuelo(
+                    rs.getString("numero"),
+                    rs.getString("nombre_destino"),
+                    rs.getString("hora"),
+                    rs.getString("codigo_puerta"),
+                    rs.getString("descripcion_estado")
+                ));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return lista;
     }
 
     @Override
@@ -89,12 +126,7 @@ public class Main extends Application {
 
         tabla.getColumns().addAll(colNumero, colDestino, colHora, colPuerta, colEstado);
 
-        ObservableList<Vuelo> vuelos = FXCollections.observableArrayList(
-            new Vuelo("IB3104", "Londres", "10:15", "B12", "A tiempo"),
-            new Vuelo("VY1234", "París", "10:40", "C03", "Cancelado"),
-            new Vuelo("FR5678", "Roma", "11:05", "D21", "Retrasado"),
-            new Vuelo("UX1092", "Lisboa", "11:30", "A05", "A tiempo")
-        );
+        ObservableList<Vuelo> vuelos = cargarVuelos();
         tabla.setItems(vuelos);
 
         VBox raiz = new VBox(10, titulo, tabla);
