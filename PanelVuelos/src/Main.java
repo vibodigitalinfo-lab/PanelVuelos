@@ -8,6 +8,8 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
 import javafx.scene.control.Label;
 import javafx.stage.Stage;
+import javafx.scene.control.TableCell;
+import javafx.scene.paint.Color;
 
 public class Main extends Application {
 
@@ -55,12 +57,41 @@ public class Main extends Application {
 
         TableColumn<Vuelo, String> colEstado = new TableColumn<>("Estado");
         colEstado.setCellValueFactory(new PropertyValueFactory<>("estado"));
+        
+        colEstado.setCellFactory(columna -> new TableCell<Vuelo, String>() {
+            @Override
+            protected void updateItem(String estado, boolean vacio) {
+                super.updateItem(estado, vacio);
+
+                if (vacio || estado == null) {
+                    setText(null);
+                    setTextFill(Color.BLACK);
+                    setStyle("");
+                    return;
+                }
+
+                setText(estado);
+                setStyle("-fx-font-weight: bold;");
+
+                if (estado.equals("A tiempo")) {
+                    setTextFill(Color.GREEN);
+                } else if (estado.equals("Embarcando")) {
+                    setTextFill(Color.ORANGE);
+                } else if (estado.equals("Retrasado")) {
+                    setTextFill(Color.RED);
+                } else if (estado.equals("Cancelado")){
+                		setTextFill (Color.GREY);
+                } else {
+                    setTextFill(Color.BLACK);
+                }
+            }
+        });
 
         tabla.getColumns().addAll(colNumero, colDestino, colHora, colPuerta, colEstado);
 
         ObservableList<Vuelo> vuelos = FXCollections.observableArrayList(
             new Vuelo("IB3104", "Londres", "10:15", "B12", "A tiempo"),
-            new Vuelo("VY1234", "París", "10:40", "C03", "Embarcando"),
+            new Vuelo("VY1234", "París", "10:40", "C03", "Cancelado"),
             new Vuelo("FR5678", "Roma", "11:05", "D21", "Retrasado"),
             new Vuelo("UX1092", "Lisboa", "11:30", "A05", "A tiempo")
         );
