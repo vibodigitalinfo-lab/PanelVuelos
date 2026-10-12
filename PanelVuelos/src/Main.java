@@ -213,6 +213,15 @@ public class Main extends Application {
                 new Alert(Alert.AlertType.WARNING, "Rellena todos los campos.").show();
                 return;
             }
+            
+            if (!hora.matches("([01]\\d|2[0-3]):[0-5]\\d")) {
+                Alert alerta = new Alert(Alert.AlertType.ERROR);
+                alerta.setTitle("Formato incorrecto");
+                alerta.setHeaderText(null);
+                alerta.setContentText("La hora debe tener exactamente 5 caracteres con formato HH:mm (ej. 14:30 o 09:15).");
+                alerta.showAndWait();
+                return;
+            }
 
             try {
                 guardarVuelo(numero, hora, destino, puerta, estado);
